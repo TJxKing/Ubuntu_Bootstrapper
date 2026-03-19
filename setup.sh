@@ -55,6 +55,58 @@ else
     IS_WSL=false
 fi
 
+# ── Pre-flight Questions ─────────────────────────────────────────────────────
+section "Pre-flight Questions"
+
+# a) Python / pyenv
+if prompt_yn "Install Python development tools (pyenv)?"; then
+    INSTALL_PYENV=true
+else
+    INSTALL_PYENV=false
+fi
+
+# b) SSH Key
+if prompt_yn "Set up SSH key?"; then
+    SETUP_SSH=true
+    read -rp "$(printf "${YELLOW}[?]${NC}   Email for SSH key: ")" SSH_EMAIL
+else
+    SETUP_SSH=false
+    SSH_EMAIL=""
+fi
+
+# c) Git Configuration
+if prompt_yn "Set up Git configuration?"; then
+    SETUP_GIT=true
+
+    # user.name — check if already set
+    _CURRENT_GIT_NAME="$(git config --global user.name 2>/dev/null || true)"
+    if [[ -n "$_CURRENT_GIT_NAME" ]]; then
+        if prompt_yn "Git user.name is already set to '${_CURRENT_GIT_NAME}'. Update it?"; then
+            read -rp "$(printf "${YELLOW}[?]${NC}   Git user.name: ")" GIT_NAME
+        else
+            GIT_NAME=""
+        fi
+    else
+        read -rp "$(printf "${YELLOW}[?]${NC}   Git user.name: ")" GIT_NAME
+    fi
+
+    # user.email — check if already set
+    _CURRENT_GIT_EMAIL="$(git config --global user.email 2>/dev/null || true)"
+    if [[ -n "$_CURRENT_GIT_EMAIL" ]]; then
+        if prompt_yn "Git user.email is already set to '${_CURRENT_GIT_EMAIL}'. Update it?"; then
+            read -rp "$(printf "${YELLOW}[?]${NC}   Git user.email: ")" GIT_EMAIL
+        else
+            GIT_EMAIL=""
+        fi
+    else
+        read -rp "$(printf "${YELLOW}[?]${NC}   Git user.email: ")" GIT_EMAIL
+    fi
+else
+    SETUP_GIT=false
+    GIT_NAME=""
+    GIT_EMAIL=""
+fi
+
 # ── System Update ───────────────────────────────────────────────────────────
 section "System Update"
 info "Updating package lists..."
@@ -129,9 +181,16 @@ done
 
 # ── Python / pyenv (Optional) ──────────────────────────────────────────────
 section "Python (pyenv)"
-if command -v pyenv &>/dev/null; then
+PYENV_ROOT="${PYENV_ROOT:-$HOME/.pyenv}"
+
+if command -v pyenv &>/dev/null || [[ -d "$PYENV_ROOT" ]]; then
+    # Load pyenv into PATH if it exists on disk but isn't on PATH yet
+    if ! command -v pyenv &>/dev/null && [[ -d "$PYENV_ROOT/bin" ]]; then
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init -)"
+    fi
     success "pyenv already installed ($(pyenv --version))"
-elif prompt_yn "Install Python development tools (pyenv)?"; then
+elif [[ "$INSTALL_PYENV" == true ]]; then
     # pyenv build dependencies
     PYENV_DEPS=(
         libssl-dev libbz2-dev libreadline-dev libsqlite3-dev
@@ -156,56 +215,55 @@ fi
 
 # ── Git Configuration ───────────────────────────────────────────────────────
 section "Git Configuration"
-if [[ -z "$(git config --global user.name 2>/dev/null)" ]]; then
-    read -rp "$(printf "${YELLOW}[?]${NC}   Git user.name: ")" GIT_NAME
+if [[ "$SETUP_GIT" == true ]]; then
     if [[ -n "$GIT_NAME" ]]; then
         git config --global user.name "$GIT_NAME"
         success "Git user.name set to: $GIT_NAME"
     else
-        warn "Skipped — no name entered"
+        if [[ -n "$_CURRENT_GIT_NAME" ]]; then
+            success "Git user.name unchanged: $_CURRENT_GIT_NAME"
+        else
+            warn "Git user.name not set"
+        fi
     fi
-else
-    success "Git user.name already set: $(git config --global user.name)"
-fi
 
-if [[ -z "$(git config --global user.email 2>/dev/null)" ]]; then
-    read -rp "$(printf "${YELLOW}[?]${NC}   Git user.email: ")" GIT_EMAIL
     if [[ -n "$GIT_EMAIL" ]]; then
         git config --global user.email "$GIT_EMAIL"
         success "Git user.email set to: $GIT_EMAIL"
     else
-        warn "Skipped — no email entered"
+        if [[ -n "$_CURRENT_GIT_EMAIL" ]]; then
+            success "Git user.email unchanged: $_CURRENT_GIT_EMAIL"
+        else
+            warn "Git user.email not set"
+        fi
     fi
-else
-    success "Git user.email already set: $(git config --global user.email)"
-fi
 
-# Apply remaining git config from dotfile (won't overwrite name/email set above)
-git config --global init.defaultBranch main
-git config --global core.editor vim
-git config --global alias.st status
-git config --global alias.co checkout
-git config --global alias.br branch
-git config --global alias.lg "log --oneline --graph --decorate --all"
-success "Git config applied"
+    # Apply remaining git config
+    git config --global init.defaultBranch main
+    git config --global core.editor vim
+    git config --global alias.st status
+    git config --global alias.co checkout
+    git config --global alias.br branch
+    git config --global alias.lg "log --oneline --graph --decorate --all"
+    success "Git config applied"
+else
+    info "Skipping Git configuration"
+fi
 
 # ── SSH Key ─────────────────────────────────────────────────────────────────
 section "SSH Key"
 SSH_KEY="${HOME}/.ssh/id_ed25519"
 if [[ -f "$SSH_KEY" ]]; then
     success "SSH key already exists: ${SSH_KEY}"
+elif [[ "$SETUP_SSH" == true ]] && [[ -n "$SSH_EMAIL" ]]; then
+    mkdir -p "${HOME}/.ssh"
+    chmod 700 "${HOME}/.ssh"
+    ssh-keygen -t ed25519 -C "$SSH_EMAIL" -f "$SSH_KEY" -N ""
+    success "SSH key generated: ${SSH_KEY}"
+    info "Public key:"
+    cat "${SSH_KEY}.pub"
 else
-    read -rp "$(printf "${YELLOW}[?]${NC}   Email for SSH key (blank to skip): ")" SSH_EMAIL
-    if [[ -n "$SSH_EMAIL" ]]; then
-        mkdir -p "${HOME}/.ssh"
-        chmod 700 "${HOME}/.ssh"
-        ssh-keygen -t ed25519 -C "$SSH_EMAIL" -f "$SSH_KEY" -N ""
-        success "SSH key generated: ${SSH_KEY}"
-        info "Public key:"
-        cat "${SSH_KEY}.pub"
-    else
-        warn "Skipped — no email entered"
-    fi
+    info "Skipping SSH key generation"
 fi
 
 # ── Symlink Dotfiles ────────────────────────────────────────────────────────
