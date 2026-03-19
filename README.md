@@ -20,7 +20,7 @@ Idempotent shell script that configures a fresh Ubuntu/Debian environment with a
 ### Option 1: Clone and run
 
 ```bash
-git clone <your-repo-url> ~/bootstrap
+git clone https://github.com/TJxKing/Ubuntu_Bootstrapper ~/bootstrap
 cd ~/bootstrap
 chmod +x setup.sh
 ./setup.sh
@@ -30,7 +30,7 @@ chmod +x setup.sh
 
 ```bash
 sudo apt-get install -y git
-git clone <your-repo-url> ~/bootstrap
+git clone https://github.com/TJxKing/Ubuntu_Bootstrapper ~/bootstrap
 cd ~/bootstrap
 chmod +x setup.sh
 ./setup.sh
