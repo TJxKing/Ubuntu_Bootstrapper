@@ -1,0 +1,72 @@
+# Starship prompt config — matches prior p10k lean style
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$os\
+$directory\
+$git_branch\
+$git_status\
+$python\
+$nodejs\
+$cmd_duration\
+$jobs\
+$time\
+$line_break\
+$character"""
+
+[os]
+disabled = false
+style = "bold blue"
+
+[os.symbols]
+Windows = " "
+Ubuntu = " "
+Debian = " "
+Macos = " "
+Linux = " "
+
+[directory]
+truncation_length = 3
+truncate_to_repo = false
+style = "bold cyan"
+
+[git_branch]
+symbol = " "
+style = "bold purple"
+
+[git_status]
+style = "bold red"
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+modified = "!${count}"
+staged = "+${count}"
+untracked = "?${count}"
+deleted = "✘${count}"
+
+[python]
+symbol = " "
+style = "bold yellow"
+
+[nodejs]
+symbol = " "
+style = "bold green"
+
+[cmd_duration]
+min_time = 3_000
+format = "took [$duration](bold yellow) "
+
+[jobs]
+symbol = " "
+style = "bold blue"
+number_threshold = 1
+
+[time]
+disabled = false
+format = "[$time](bold white) "
+time_format = "%H:%M"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
