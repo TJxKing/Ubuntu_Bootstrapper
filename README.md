@@ -1,99 +1,89 @@
-# Ubuntu Bootstrap (WSL & Server)
+# Cross-Platform Bootstrap (Linux/WSL + Windows Terminal)
 
-Idempotent shell script that configures a fresh Ubuntu/Debian environment with a modern terminal setup. Works on both WSL and native Ubuntu servers.
+Idempotent bootstrap scripts for a modern terminal setup on both Ubuntu/WSL and Windows Terminal. One shared `starship.toml` drives the prompt on both sides.
 
 ## What Gets Installed
+
+### Linux / WSL (`setup-linux.sh`)
 
 | Component | Details |
 |---|---|
 | **Core packages** | `vim` `git` `curl` `tmux` `unzip` `dnsutils` `wget` `build-essential` |
 | **Zsh** | Default shell |
-| **Powerlevel10k** | Standalone (no Oh My Zsh), cloned to `~/.powerlevel10k` |
+| **Starship** | Cross-platform prompt, installed via official installer |
 | **Zsh plugins** | `zsh-autosuggestions`, `zsh-syntax-highlighting` in `~/.zsh/` |
-| **pyenv** | *Optional* — prompted during setup. Installs pyenv + pyenv-virtualenv |
+| **pyenv** | *Optional* — prompted during setup |
 | **Git config** | Prompted for `user.name` and `user.email`; sets sensible defaults |
 | **SSH key** | ed25519 key generated if one doesn't exist (prompted for email) |
-| **Dotfiles** | `.zshrc`, `.p10k.zsh`, `.tmux.conf`, `.vimrc` symlinked to `$HOME` |
+| **Dotfiles** | `.zshrc`, `.tmux.conf`, `.vimrc` symlinked to `$HOME`; `starship.toml` symlinked to `~/.config/` |
+
+### Windows (`setup-windows.ps1`)
+
+| Component | Details |
+|---|---|
+| **JetBrains Mono Nerd Font** | Installed per-user from the local `JetBrainsMono\` folder (no admin required) |
+| **Starship** | Installed via `winget` |
+| **Starship config** | `dotfiles\starship.toml` copied to `%USERPROFILE%\.config\starship.toml` |
+| **PSReadLine 2.2+** | ListView prediction, vim-friendly key bindings |
+| **PowerShell profile** | Managed sentinel block added to `$PROFILE` |
+| **Git config** | Same defaults as Linux script |
+| **SSH key** | ed25519 key generated if one doesn't exist |
 
 ## Quick Start
 
-### Option 1: Clone and run
+### Linux / WSL
 
 ```bash
 git clone https://github.com/TJxKing/Ubuntu_Bootstrapper ~/bootstrap
 cd ~/bootstrap
-chmod +x setup.sh
-./setup.sh
+chmod +x setup-linux.sh
+./setup-linux.sh
 ```
 
-### Option 2: Run directly from a fresh system
+### Windows Terminal (PowerShell 7)
 
-```bash
-sudo apt-get install -y git
-git clone https://github.com/TJxKing/Ubuntu_Bootstrapper ~/bootstrap
-cd ~/bootstrap
-chmod +x setup.sh
-./setup.sh
+```powershell
+git clone https://github.com/TJxKing/Ubuntu_Bootstrapper $HOME\bootstrap
+cd $HOME\bootstrap
+pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1
 ```
 
-After setup completes, **open a new terminal** (or run `zsh`) to start using your new shell.
+> **Note:** The `JetBrainsMono\` folder with Nerd Font TTFs must be present in the repo directory before running the Windows script. The fonts are included in this repo.
+
+After either setup completes, **open a new terminal** to activate the new shell/prompt.
 
 ## Re-running
 
-The script is idempotent — safe to run again at any time. It will:
-- Skip packages already installed
-- Pull latest Powerlevel10k and plugin updates
-- Skip SSH key generation if a key already exists
-- Skip git config if `user.name` / `user.email` are already set
-- Back up existing dotfiles before re-linking
+Both scripts are idempotent — safe to run again at any time. They skip steps that are already complete and never overwrite user content outside their managed blocks.
 
 ## Customizing
 
-### Powerlevel10k prompt
-Run `p10k configure` to launch the interactive configuration wizard. Your choices are saved to `~/.p10k.zsh`.
+### Starship prompt
+
+Edit `dotfiles/starship.toml` and re-run your platform's setup script (Linux re-symlinks; Windows re-copies with backup if changed). Full config reference at [starship.rs/config](https://starship.rs/config/).
 
 ### Dotfiles
-Edit the files in `dotfiles/` and re-run `./setup.sh` — existing symlinks will be updated automatically.
 
-### Adding packages
-Add entries to the `CORE_PACKAGES` array in `setup.sh`.
+Edit files in `dotfiles/` and re-run `./setup-linux.sh` — existing symlinks update automatically.
 
-## Font Setup (WSL / Windows Terminal)
+### Adding packages (Linux)
 
-Powerlevel10k uses special glyphs that require a Nerd Font. **This font must be installed on Windows**, not inside WSL.
-
-### Install JetBrains Mono Nerd Font
-
-1. Download **JetBrainsMono.zip** from [Nerd Fonts Releases](https://github.com/ryanoasis/nerd-fonts/releases/latest)
-2. Extract the zip
-3. Select all `.ttf` files → Right-click → **Install for all users**
-4. Open **Windows Terminal** → Settings → Profile (Ubuntu) → Appearance → Font face → select **`JetBrainsMono Nerd Font`**
-5. Restart Windows Terminal
-
-### Native Linux (non-WSL)
-
-```bash
-mkdir -p ~/.local/share/fonts
-cd ~/.local/share/fonts
-curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
-unzip JetBrainsMono.zip -d JetBrainsMono
-rm JetBrainsMono.zip
-fc-cache -fv
-```
-
-Then configure your terminal emulator to use **JetBrainsMono Nerd Font**.
+Append to the `CORE_PACKAGES` array in `setup-linux.sh`.
 
 ## File Structure
 
 ```
 .
-├── setup.sh              # Main bootstrap script
-├── README.md             # This file
-└── dotfiles/
-    ├── .zshrc            # Zsh config (p10k + plugins + aliases)
-    ├── .p10k.zsh         # Powerlevel10k lean theme config
-    ├── .tmux.conf        # Tmux sane defaults
-    └── .vimrc            # Vim sane defaults
+├── setup-linux.sh        # Linux/WSL bootstrap
+├── setup-windows.ps1     # Windows Terminal bootstrap (PS7)
+├── README.md
+├── dotfiles/
+│   ├── .zshrc            # Zsh config (Starship + plugins + aliases)
+│   ├── .tmux.conf        # Tmux sane defaults
+│   ├── .vimrc            # Vim sane defaults
+│   └── starship.toml     # Shared Starship prompt config
+└── JetBrainsMono/        # Nerd Font TTFs (used by setup-windows.ps1)
+    └── JetBrainsMonoNerdFont-*.ttf
 ```
 
 ## Tmux Cheat Sheet
@@ -111,12 +101,31 @@ The config rebinds the prefix to `Ctrl+a` (instead of `Ctrl+b`):
 ## Troubleshooting
 
 ### Icons/glyphs show as boxes or question marks
-→ The Nerd Font isn't installed or isn't selected in your terminal. See [Font Setup](#font-setup-wsl--windows-terminal).
+
+→ The Nerd Font isn't selected in Windows Terminal. Go to Settings → Profile → Appearance → Font face → **JetBrainsMono Nerd Font**.
+
+### Starship not found after install (Linux)
+
+→ The installer puts the binary in `/usr/local/bin`. Open a new shell or run `source ~/.zshrc`.
+
+### Starship not found after winget install (Windows)
+
+→ Open a new `pwsh` session. winget updates `%PATH%` at the machine level but the current session won't see it until restarted.
 
 ### pyenv: command not found (after opting in)
+
 → Open a new terminal. pyenv is loaded via `.zshrc` which only takes effect in a new shell.
 
-### Permission denied on setup.sh
+### Permission denied on setup-linux.sh
+
 ```bash
-chmod +x setup.sh
+chmod +x setup-linux.sh
+```
+
+### Native Linux font setup (non-WSL, without the Windows script)
+
+```bash
+mkdir -p ~/.local/share/fonts
+cp JetBrainsMono/*.ttf ~/.local/share/fonts/
+fc-cache -fv
 ```
