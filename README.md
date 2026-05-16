@@ -21,7 +21,7 @@ Idempotent bootstrap scripts for a modern terminal setup on both Ubuntu/WSL and 
 
 | Component | Details |
 |---|---|
-| **JetBrains Mono Nerd Font** | Installed per-user from the local `JetBrainsMono\` folder (no admin required) |
+| **JetBrains Mono Nerd Font** | Downloaded from NerdFonts releases and installed per-user (no admin required) |
 | **Starship** | Installed via `winget` |
 | **Starship config** | `dotfiles\starship.toml` copied to `%USERPROFILE%\.config\starship.toml` |
 | **PSReadLine 2.2+** | ListView prediction, vim-friendly key bindings |
@@ -47,8 +47,6 @@ git clone https://github.com/TJxKing/Ubuntu_Bootstrapper $HOME\bootstrap
 cd $HOME\bootstrap
 pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1
 ```
-
-> **Note:** The `JetBrainsMono\` folder with Nerd Font TTFs must be present in the repo directory before running the Windows script. The fonts are included in this repo.
 
 After either setup completes, **open a new terminal** to activate the new shell/prompt.
 
@@ -77,13 +75,11 @@ Append to the `CORE_PACKAGES` array in `setup-linux.sh`.
 ├── setup-linux.sh        # Linux/WSL bootstrap
 ├── setup-windows.ps1     # Windows Terminal bootstrap (PS7)
 ├── README.md
-├── dotfiles/
-│   ├── .zshrc            # Zsh config (Starship + plugins + aliases)
-│   ├── .tmux.conf        # Tmux sane defaults
-│   ├── .vimrc            # Vim sane defaults
-│   └── starship.toml     # Shared Starship prompt config
-└── JetBrainsMono/        # Nerd Font TTFs (used by setup-windows.ps1)
-    └── JetBrainsMonoNerdFont-*.ttf
+└── dotfiles/
+    ├── .zshrc            # Zsh config (Starship + plugins + aliases)
+    ├── .tmux.conf        # Tmux sane defaults
+    ├── .vimrc            # Vim sane defaults
+    └── starship.toml     # Shared Starship prompt config
 ```
 
 ## Tmux Cheat Sheet
@@ -126,6 +122,8 @@ chmod +x setup-linux.sh
 
 ```bash
 mkdir -p ~/.local/share/fonts
-cp JetBrainsMono/*.ttf ~/.local/share/fonts/
+curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+unzip JetBrainsMono.zip "JetBrainsMonoNerdFont*.ttf" -d ~/.local/share/fonts/
+rm JetBrainsMono.zip
 fc-cache -fv
 ```

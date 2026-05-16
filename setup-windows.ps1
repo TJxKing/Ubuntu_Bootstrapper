@@ -32,25 +32,26 @@ Write-Ok "winget found"
 # ── Nerd Font Install ────────────────────────────────────────────────────────
 Write-Section "JetBrains Mono Nerd Font"
 
-$FontSource  = Join-Path $ScriptDir "JetBrainsMono"
-$FontDest    = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
-$RegPath     = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
-$MarkerFont  = Join-Path $FontDest "JetBrainsMonoNerdFont-Regular.ttf"
-
-if (-not (Test-Path $FontSource)) {
-    Write-Error "Font folder not found: $FontSource`nAdd JetBrainsMonoNerdFont-*.ttf files to the JetBrainsMono\ folder and re-run."
-    exit 1
-}
-
-$ttfFiles = Get-ChildItem -Path $FontSource -Filter "JetBrainsMonoNerdFont*.ttf"
-if ($ttfFiles.Count -eq 0) {
-    Write-Error "No JetBrainsMonoNerdFont-*.ttf files found in $FontSource"
-    exit 1
-}
+$FontDest   = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
+$RegPath    = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
+$MarkerFont = Join-Path $FontDest "JetBrainsMonoNerdFont-Regular.ttf"
 
 if (Test-Path $MarkerFont) {
     Write-Ok "JetBrains Mono Nerd Font already installed"
 } else {
+    $FontZipUrl = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
+    $TempZip    = Join-Path $env:TEMP "JetBrainsMono.zip"
+    $TempDir    = Join-Path $env:TEMP "JetBrainsMonoFonts"
+
+    Write-Info "Downloading JetBrainsMono Nerd Font from NerdFonts releases..."
+    Invoke-WebRequest -Uri $FontZipUrl -OutFile $TempZip -UseBasicParsing
+
+    Write-Info "Extracting..."
+    if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
+    Expand-Archive -Path $TempZip -DestinationPath $TempDir -Force
+    Remove-Item $TempZip -Force
+
+    $ttfFiles = Get-ChildItem -Path $TempDir -Filter "JetBrainsMonoNerdFont*.ttf" -Recurse
     Write-Info "Installing $($ttfFiles.Count) font files (per-user, no admin required)..."
     New-Item -ItemType Directory -Force -Path $FontDest | Out-Null
 
@@ -62,6 +63,8 @@ if (Test-Path $MarkerFont) {
         $displayName = [System.IO.Path]::GetFileNameWithoutExtension($ttf.Name) + " (TrueType)"
         Set-ItemProperty -Path $RegPath -Name $displayName -Value $destFile -Type String -Force
     }
+
+    Remove-Item $TempDir -Recurse -Force
     Write-Ok "JetBrains Mono Nerd Font installed"
 }
 
@@ -208,7 +211,7 @@ if (Test-Path $SshKey) {
     if ($sshEmail) {
         $sshDir = Split-Path $SshKey
         New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
-        ssh-keygen -t ed25519 -C $sshEmail -f $SshKey -N '""'
+        ssh-keygen -t ed25519 -C $sshEmail -f $SshKey -N ''
         Write-Ok "SSH key generated: $SshKey"
         Write-Info "Public key:"
         Get-Content "$SshKey.pub"
