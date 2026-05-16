@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # Ubuntu Bootstrap Script (WSL & Server)
-# Idempotent setup: zsh, Powerlevel10k, plugins, pyenv (optional), SSH, git, dotfiles
+# Idempotent setup: zsh, Starship, plugins, pyenv (optional), SSH, git, dotfiles
 # =============================================================================
 set -euo pipefail
 
@@ -92,17 +92,14 @@ else
     success "zsh installed"
 fi
 
-# ── Powerlevel10k (Standalone) ──────────────────────────────────────────────
-section "Powerlevel10k"
-P10K_DIR="${HOME}/.powerlevel10k"
-if [[ -d "$P10K_DIR" ]]; then
-    success "Powerlevel10k already installed"
-    info "Pulling latest..."
-    git -C "$P10K_DIR" pull -q 2>/dev/null || warn "Could not update Powerlevel10k (offline?)"
+# ── Starship ────────────────────────────────────────────────────────────────
+section "Starship"
+if command -v starship &>/dev/null; then
+    success "Starship already installed ($(starship --version | head -1))"
 else
-    info "Cloning Powerlevel10k..."
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
-    success "Powerlevel10k installed"
+    info "Installing Starship..."
+    curl -fsSL https://starship.rs/install.sh | sh -s -- --yes
+    success "Starship installed"
 fi
 
 # ── Zsh Plugins ─────────────────────────────────────────────────────────────
@@ -215,7 +212,7 @@ if [[ ! -d "$DOTFILES_DIR" ]]; then
     warn "Skipping dotfile symlinks"
 else
     mkdir -p "$BACKUP_DIR"
-    DOTFILES=(.zshrc .p10k.zsh .tmux.conf .vimrc)
+    DOTFILES=(.zshrc .tmux.conf .vimrc)
 
     for dotfile in "${DOTFILES[@]}"; do
         src="${DOTFILES_DIR}/${dotfile}"
@@ -241,6 +238,21 @@ else
         ln -s "$src" "$dest"
         success "${dotfile} → linked"
     done
+
+    # Starship config symlink (XDG location)
+    STARSHIP_SRC="${DOTFILES_DIR}/starship.toml"
+    STARSHIP_DEST="${HOME}/.config/starship.toml"
+    mkdir -p "${HOME}/.config"
+    if [[ -L "$STARSHIP_DEST" ]] && [[ "$(readlink -f "$STARSHIP_DEST")" = "$(readlink -f "$STARSHIP_SRC")" ]]; then
+        success "starship.toml already linked"
+    else
+        if [[ -e "$STARSHIP_DEST" ]] || [[ -L "$STARSHIP_DEST" ]]; then
+            info "Backing up existing starship.toml → ${BACKUP_DIR}/"
+            mv "$STARSHIP_DEST" "${BACKUP_DIR}/starship.toml.$(date +%Y%m%d%H%M%S)"
+        fi
+        ln -s "$STARSHIP_SRC" "$STARSHIP_DEST"
+        success "starship.toml → linked"
+    fi
 fi
 
 # ── Default Shell ───────────────────────────────────────────────────────────
@@ -260,7 +272,7 @@ fi
 section "Setup Complete"
 echo ""
 printf "${GREEN}${BOLD}  ✓ Core packages installed${NC}\n"
-printf "${GREEN}${BOLD}  ✓ Zsh + Powerlevel10k (standalone)${NC}\n"
+printf "${GREEN}${BOLD}  ✓ Zsh + Starship prompt${NC}\n"
 printf "${GREEN}${BOLD}  ✓ Plugins: autosuggestions, syntax-highlighting${NC}\n"
 if command -v pyenv &>/dev/null; then
     printf "${GREEN}${BOLD}  ✓ pyenv installed${NC}\n"
@@ -274,10 +286,7 @@ printf "${GREEN}${BOLD}  ✓ Default shell: zsh${NC}\n"
 echo ""
 
 if $IS_WSL; then
-    warn "WSL Detected — Install JetBrains Mono Nerd Font on Windows for Powerlevel10k icons"
-    info "Download: https://github.com/ryanoasis/nerd-fonts/releases/latest"
-    info "Search for 'JetBrainsMono.zip', install the fonts, then set in Windows Terminal settings"
+    warn "WSL Detected — Run setup-windows.ps1 on the Windows side to install the JetBrains Mono Nerd Font and configure PowerShell."
 fi
 
 info "Open a new terminal session (or run 'zsh') to start using your new shell"
-info "Run 'p10k configure' to customize your Powerlevel10k prompt"
