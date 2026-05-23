@@ -44,15 +44,20 @@ chmod +x setup-linux.sh
 
 ### Windows Terminal
 
-> **Fresh install with no git?** Download the ZIP from GitHub (Code → Download ZIP), extract it, then run the command below from the extracted folder.
-
 ```powershell
 git clone https://github.com/TJxKing/Bootstrapper $HOME\bootstrap
 cd $HOME\bootstrap
-powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
+pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1
 ```
 
-The script installs PowerShell 7 and Git automatically if they are missing, then continues setup.
+**Fresh install (no PS7 or Git yet)?** Open **Windows PowerShell** (Start → search "PowerShell") and run this first:
+
+```powershell
+winget install --id Microsoft.PowerShell --silent --accept-package-agreements --accept-source-agreements
+winget install --id Git.Git --silent --accept-package-agreements --accept-source-agreements
+```
+
+Then open a new **pwsh** terminal and run the clone commands above.
 
 After either setup completes, **open a new terminal** to activate the new shell/prompt.
 
