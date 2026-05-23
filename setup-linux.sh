@@ -18,21 +18,33 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
 BACKUP_DIR="${HOME}/.dotfiles.bak"
 
-info()    { printf "${BLUE}[INFO]${NC}  %s\n" "$1"; }
-success() { printf "${GREEN}[OK]${NC}    %s\n" "$1"; }
-warn()    { printf "${YELLOW}[WARN]${NC}  %s\n" "$1"; }
-error()   { printf "${RED}[ERROR]${NC} %s\n" "$1"; }
-section() { printf "\n${BOLD}${CYAN}━━━ %s ━━━${NC}\n" "$1"; }
+info()    { printf "${CYAN}[→]${NC}  %s\n" "$1"; }
+success() { printf "${GREEN}[✓]${NC}  %s\n" "$1"; }
+warn()    { printf "${YELLOW}[!]${NC}  %s\n" "$1"; }
+error()   { printf "${RED}[✗]${NC}  %s\n" "$1"; }
+section() {
+    local title="$1"
+    local pad_len=$(( 44 - ${#title} ))
+    (( pad_len < 2 )) && pad_len=2
+    local pad
+    pad=$(printf '─%.0s' $(seq 1 "$pad_len"))
+    printf "\n${BOLD}${BLUE}── %s %s${NC}\n" "$title" "$pad"
+}
+header()  {
+    printf "\n${BOLD}${BLUE}╔══════════════════════════════════════════════╗${NC}\n"
+    printf "${BOLD}${BLUE}║  %-44s║${NC}\n" "$1"
+    printf "${BOLD}${BLUE}╚══════════════════════════════════════════════╝${NC}\n\n"
+}
 
 prompt_yn() {
     local prompt="$1"
     local default="${2:-n}"
     local reply
     if [[ "$default" = "y" ]]; then
-        read -rp "$(printf "${YELLOW}[?]${NC}   ${prompt} [Y/n]: ")" reply
+        read -rp "$(printf "  ${prompt} [Y/n]: ")" reply
         reply="${reply:-y}"
     else
-        read -rp "$(printf "${YELLOW}[?]${NC}   ${prompt} [y/N]: ")" reply
+        read -rp "$(printf "  ${prompt} [y/N]: ")" reply
         reply="${reply:-n}"
     fi
     [[ "$reply" =~ ^[Yy]$ ]]
@@ -44,6 +56,8 @@ if [[ "$EUID" -eq 0 ]]; then
 else
     SUDO="sudo"
 fi
+
+header "Ubuntu Bootstrap"
 
 # ── Environment Detection ───────────────────────────────────────────────────
 section "Environment Detection"
@@ -154,7 +168,7 @@ fi
 # ── Git Configuration ───────────────────────────────────────────────────────
 section "Git Configuration"
 if [[ -z "$(git config --global user.name 2>/dev/null)" ]]; then
-    read -rp "$(printf "${YELLOW}[?]${NC}   Git user.name: ")" GIT_NAME
+    read -rp "  Git user.name: " GIT_NAME
     if [[ -n "$GIT_NAME" ]]; then
         git config --global user.name "$GIT_NAME"
         success "Git user.name set to: $GIT_NAME"
@@ -166,7 +180,7 @@ else
 fi
 
 if [[ -z "$(git config --global user.email 2>/dev/null)" ]]; then
-    read -rp "$(printf "${YELLOW}[?]${NC}   Git user.email: ")" GIT_EMAIL
+    read -rp "  Git user.email: " GIT_EMAIL
     if [[ -n "$GIT_EMAIL" ]]; then
         git config --global user.email "$GIT_EMAIL"
         success "Git user.email set to: $GIT_EMAIL"
@@ -192,7 +206,7 @@ SSH_KEY="${HOME}/.ssh/id_ed25519"
 if [[ -f "$SSH_KEY" ]]; then
     success "SSH key already exists: ${SSH_KEY}"
 else
-    read -rp "$(printf "${YELLOW}[?]${NC}   Email for SSH key (blank to skip): ")" SSH_EMAIL
+    read -rp "  Email for SSH key (blank to skip): " SSH_EMAIL
     if [[ -n "$SSH_EMAIL" ]]; then
         mkdir -p "${HOME}/.ssh"
         chmod 700 "${HOME}/.ssh"

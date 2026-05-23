@@ -1,3 +1,16 @@
+<#
+.SYNOPSIS
+    Idempotent bootstrap for Windows Terminal / PowerShell 7.
+.DESCRIPTION
+    Installs PowerShell 7 and Git if missing, then configures JetBrains Mono
+    Nerd Font, Starship prompt, PSReadLine, a managed PowerShell profile block,
+    global Git config, and an ed25519 SSH key. Safe to re-run.
+.NOTES
+    Author:  TJ King
+    Created: 2026-03
+    Updated: 2026-05 — added PS7/Git auto-install; fresh-install support
+#>
+
 # =============================================================================
 # Windows Terminal Bootstrap
 # Idempotent setup: PS7, Git, Nerd Font, Starship, PSReadLine, PowerShell profile, SSH
@@ -5,40 +18,56 @@
 #   powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
 # =============================================================================
 
-# ── PowerShell 7 Bootstrap ────────────────────────────────────────────────────
+#Region Bootstrap
 # PS5-compatible block — must run before Set-StrictMode
 if ($PSVersionTable.PSVersion.Major -lt 7) {
-    Write-Host "[INFO]  PowerShell 7 not detected. Installing via winget..." -ForegroundColor Cyan
+    Write-Host "[→]  PowerShell 7 not detected. Installing via winget..." -ForegroundColor Cyan
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Host "[ERROR] winget not found. Install App Installer from the Microsoft Store, then re-run." -ForegroundColor Red
+        Write-Host "[✗]  winget not found. Install App Installer from the Microsoft Store, then re-run." -ForegroundColor Red
         exit 1
     }
     winget install --id Microsoft.PowerShell --silent --accept-package-agreements --accept-source-agreements
     $pwsh = Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
     if (Test-Path $pwsh) {
-        Write-Host "[INFO]  Relaunching in PowerShell 7..." -ForegroundColor Cyan
+        Write-Host "[→]  Relaunching in PowerShell 7..." -ForegroundColor Cyan
         & $pwsh -ExecutionPolicy Bypass -File $PSCommandPath
     } else {
-        Write-Host "[INFO]  PS7 installed. Open a new terminal and run: pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1" -ForegroundColor Yellow
+        Write-Host "[!]  PS7 installed. Open a new terminal and run: pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1" -ForegroundColor Yellow
     }
     exit
 }
+#EndRegion
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
-function Write-Info    ($msg) { Write-Host "[INFO]  $msg" -ForegroundColor Cyan }
-function Write-Ok      ($msg) { Write-Host "[OK]    $msg" -ForegroundColor Green }
-function Write-Warn    ($msg) { Write-Host "[WARN]  $msg" -ForegroundColor Yellow }
-function Write-Section ($msg) { Write-Host "`n━━━ $msg ━━━" -ForegroundColor Magenta }
+#Region Helpers
+function Write-Info    ($msg) { Write-Host "[→]  $msg" -ForegroundColor Cyan }
+function Write-Ok      ($msg) { Write-Host "[✓]  $msg" -ForegroundColor Green }
+function Write-Warn    ($msg) { Write-Host "[!]  $msg" -ForegroundColor Yellow }
+function Write-Err     ($msg) { Write-Host "[✗]  $msg" -ForegroundColor Red }
+function Write-Section ($msg) {
+    $pad = '─' * [Math]::Max(2, 44 - $msg.Length)
+    Write-Host "`n── $msg $pad" -ForegroundColor Blue
+}
+function Write-Header ($title) {
+    $inner = ("  $title").PadRight(46)
+    Write-Host "`n╔$('═' * 46)╗" -ForegroundColor Blue
+    Write-Host "║$inner║" -ForegroundColor Blue
+    Write-Host "╚$('═' * 46)╝" -ForegroundColor Blue
+}
+#EndRegion
 
 $ScriptDir = $PSScriptRoot
 
-# ── winget Guard ─────────────────────────────────────────────────────────────
-Write-Section "Checking prerequisites"
+#Region Main
+
+Write-Header "Windows Terminal Bootstrap"
+
+# ── Prerequisites ─────────────────────────────────────────────────────────────
+Write-Section "Prerequisites"
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Write-Error "winget not found. Install App Installer from the Microsoft Store and try again."
+    Write-Err "winget not found. Install App Installer from the Microsoft Store and try again."
     exit 1
 }
 Write-Ok "winget found"
@@ -59,7 +88,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     }
 }
 
-# ── Nerd Font Install ────────────────────────────────────────────────────────
+# ── Nerd Font ─────────────────────────────────────────────────────────────────
 Write-Section "JetBrains Mono Nerd Font"
 
 $FontDest   = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
@@ -119,7 +148,7 @@ $StarshipSrc  = Join-Path $ScriptDir "dotfiles\starship.toml"
 $StarshipDest = Join-Path $env:USERPROFILE ".config\starship.toml"
 
 if (-not (Test-Path $StarshipSrc)) {
-    Write-Error "starship.toml not found at $StarshipSrc"
+    Write-Err "starship.toml not found at $StarshipSrc"
     exit 1
 }
 
@@ -200,7 +229,7 @@ $currentName = git config --global user.name 2>$null
 if ($currentName) {
     Write-Ok "Git user.name already set: $currentName"
 } else {
-    $gitName = Read-Host "[?]   Git user.name"
+    $gitName = Read-Host "  Git user.name"
     if ($gitName) {
         git config --global user.name $gitName
         Write-Ok "Git user.name set to: $gitName"
@@ -213,7 +242,7 @@ $currentEmail = git config --global user.email 2>$null
 if ($currentEmail) {
     Write-Ok "Git user.email already set: $currentEmail"
 } else {
-    $gitEmail = Read-Host "[?]   Git user.email"
+    $gitEmail = Read-Host "  Git user.email"
     if ($gitEmail) {
         git config --global user.email $gitEmail
         Write-Ok "Git user.email set to: $gitEmail"
@@ -237,7 +266,7 @@ $SshKey = Join-Path $env:USERPROFILE ".ssh\id_ed25519"
 if (Test-Path $SshKey) {
     Write-Ok "SSH key already exists: $SshKey"
 } else {
-    $sshEmail = Read-Host "[?]   Email for SSH key (blank to skip)"
+    $sshEmail = Read-Host "  Email for SSH key (blank to skip)"
     if ($sshEmail) {
         $sshDir = Split-Path $SshKey
         New-Item -ItemType Directory -Force -Path $sshDir | Out-Null
@@ -263,3 +292,5 @@ if (Test-Path $SshKey) { Write-Ok "SSH key configured" }
 Write-Host ""
 Write-Info "Open a new pwsh terminal to activate Starship and PSReadLine settings."
 Write-Info "Set font in Windows Terminal: Settings → Profile → Appearance → Font face → JetBrainsMono Nerd Font"
+
+#EndRegion
