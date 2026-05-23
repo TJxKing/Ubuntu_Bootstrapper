@@ -1,9 +1,29 @@
-#Requires -Version 7
 # =============================================================================
-# Windows Terminal Bootstrap (PS7)
-# Idempotent setup: Nerd Font, Starship, PSReadLine, PowerShell profile, git, SSH
-# Run: pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1
+# Windows Terminal Bootstrap
+# Idempotent setup: PS7, Git, Nerd Font, Starship, PSReadLine, PowerShell profile, SSH
+# Run from Windows PowerShell 5 or PS7:
+#   powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
 # =============================================================================
+
+# ── PowerShell 7 Bootstrap ────────────────────────────────────────────────────
+# PS5-compatible block — must run before Set-StrictMode
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "[INFO]  PowerShell 7 not detected. Installing via winget..." -ForegroundColor Cyan
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        Write-Host "[ERROR] winget not found. Install App Installer from the Microsoft Store, then re-run." -ForegroundColor Red
+        exit 1
+    }
+    winget install --id Microsoft.PowerShell --silent --accept-package-agreements --accept-source-agreements
+    $pwsh = Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
+    if (Test-Path $pwsh) {
+        Write-Host "[INFO]  Relaunching in PowerShell 7..." -ForegroundColor Cyan
+        & $pwsh -ExecutionPolicy Bypass -File $PSCommandPath
+    } else {
+        Write-Host "[INFO]  PS7 installed. Open a new terminal and run: pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1" -ForegroundColor Yellow
+    }
+    exit
+}
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -15,12 +35,6 @@ function Write-Section ($msg) { Write-Host "`n━━━ $msg ━━━" -Foregro
 
 $ScriptDir = $PSScriptRoot
 
-# ── PS7 Guard ────────────────────────────────────────────────────────────────
-if ($PSVersionTable.PSVersion.Major -lt 7) {
-    Write-Error "This script requires PowerShell 7+. Run it with: pwsh -File .\setup-windows.ps1"
-    exit 1
-}
-
 # ── winget Guard ─────────────────────────────────────────────────────────────
 Write-Section "Checking prerequisites"
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -28,6 +42,22 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     exit 1
 }
 Write-Ok "winget found"
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+Write-Section "Git"
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    Write-Ok "Git already installed ($(git --version))"
+} else {
+    Write-Info "Installing Git via winget..."
+    winget install --id Git.Git --silent --accept-package-agreements --accept-source-agreements
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+                [System.Environment]::GetEnvironmentVariable("Path", "User")
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        Write-Ok "Git installed ($(git --version))"
+    } else {
+        Write-Warn "Git installed but not yet in PATH — git commands will work after you restart your terminal."
+    }
+}
 
 # ── Nerd Font Install ────────────────────────────────────────────────────────
 Write-Section "JetBrains Mono Nerd Font"

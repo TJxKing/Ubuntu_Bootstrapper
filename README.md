@@ -21,12 +21,14 @@ Idempotent bootstrap scripts for a modern terminal setup on both Ubuntu/WSL and 
 
 | Component | Details |
 |---|---|
+| **PowerShell 7** | Installed via `winget` if not present; script self-relaunches in PS7 automatically |
+| **Git** | Installed via `winget` if not present |
 | **JetBrains Mono Nerd Font** | Downloaded from NerdFonts releases and installed per-user (no admin required) |
 | **Starship** | Installed via `winget` |
 | **Starship config** | `dotfiles\starship.toml` copied to `%USERPROFILE%\.config\starship.toml` |
 | **PSReadLine 2.2+** | ListView prediction, vim-friendly key bindings |
 | **PowerShell profile** | Managed sentinel block added to `$PROFILE` |
-| **Git config** | Same defaults as Linux script |
+| **Git config** | Prompted for `user.name` and `user.email`; sets sensible defaults |
 | **SSH key** | ed25519 key generated if one doesn't exist |
 
 ## Quick Start
@@ -40,13 +42,17 @@ chmod +x setup-linux.sh
 ./setup-linux.sh
 ```
 
-### Windows Terminal (PowerShell 7)
+### Windows Terminal
+
+> **Fresh install with no git?** Download the ZIP from GitHub (Code → Download ZIP), extract it, then run the command below from the extracted folder.
 
 ```powershell
 git clone https://github.com/TJxKing/Bootstrapper $HOME\bootstrap
 cd $HOME\bootstrap
-pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1
+powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
 ```
+
+The script installs PowerShell 7 and Git automatically if they are missing, then continues setup.
 
 After either setup completes, **open a new terminal** to activate the new shell/prompt.
 
