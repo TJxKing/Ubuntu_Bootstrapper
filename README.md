@@ -34,7 +34,7 @@ Idempotent bootstrap scripts for a modern terminal setup on both Ubuntu/WSL and 
 ### Linux / WSL
 
 ```bash
-git clone https://github.com/TJxKing/Ubuntu_Bootstrapper ~/bootstrap
+git clone https://github.com/TJxKing/Bootstrapper ~/bootstrap
 cd ~/bootstrap
 chmod +x setup-linux.sh
 ./setup-linux.sh
@@ -43,7 +43,7 @@ chmod +x setup-linux.sh
 ### Windows Terminal (PowerShell 7)
 
 ```powershell
-git clone https://github.com/TJxKing/Ubuntu_Bootstrapper $HOME\bootstrap
+git clone https://github.com/TJxKing/Bootstrapper $HOME\bootstrap
 cd $HOME\bootstrap
 pwsh -ExecutionPolicy Bypass -File .\setup-windows.ps1
 ```
